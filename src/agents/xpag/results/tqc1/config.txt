@@ -1,0 +1,15 @@
+env_info:
+env_type: Gym
+name: UpkieWheelsEnv-v3
+is_goalenv: False
+num_envs: 1
+max_episode_steps: 1000000000
+action_space: Box(-1.0, 1.0, (1, 1), float32)
+single_action_space: Box(-1.0, 1.0, (1,), float32)
+action_dim: 1
+observation_dim: 4
+achieved_goal_dim: None
+desired_goal_dim: None
+
+agent config:
+[('observation_dim', 4), ('action_dim', 1), ('params', {'actor_lr': 0.003, 'critic_lr': 0.003, 'temp_lr': 0.0003, 'tau': 0.05, 'seed': 0}), ('__class__', <class 'xpag.agents.tqc.tqc.TQC'>)]
