@@ -21,7 +21,6 @@ import gymnasium as gym
 import upkie
 
 from upkie.envs import register
-from upkie.envs import UpkieWheelsEnv
 
 print(jax.lib.xla_bridge.get_backend().platform)
 
@@ -57,8 +56,15 @@ def parse_arguments():
     parser.add_argument('--save_agent_every_x_steps', type=int, default=50_000,
                         help='Save the agent every x steps (default: 50_000)')
     
+    parser.add_argument('--env', type=str, default='UpkieWheelsEnv-v3',
+                        help='Training environment')
+    
     parser.add_argument('--exp_name', type=str, required=True,
                         help='Name of the experiment')
+
+
+
+                
     
     return parser.parse_args()
 
@@ -68,12 +74,13 @@ args = parse_arguments()
 print('Max steps:', args.max_steps)
 print('Evaluate every x steps:', args.evaluate_every_x_steps)
 print('Save agent every x steps:', args.save_agent_every_x_steps)
+print('Environment', args.env)
 print('Experiment name:', args.exp_name)
 
 
 # Training and eval environments
 num_envs = 1
-env, eval_env, env_info = gym_vec_env('UpkieWheelsEnv-v3', num_envs)
+env, eval_env, env_info = gym_vec_env(args.env, num_envs)
 
 agent = SAC(
     env_info['observation_dim'],
