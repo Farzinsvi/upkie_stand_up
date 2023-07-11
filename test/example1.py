@@ -11,7 +11,7 @@ import numpy as np
 import upkie
 import upkie.envs
 
-from upkie_stand_up.tools.trajectory import generate_trajectory
+from upkie_stand_up.tools.utils import generate_trajectory
     
 joints = np.arange(0, 6)
 
