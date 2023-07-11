@@ -1,9 +1,8 @@
-# upkie-stand-up
+# Upkie Stand Up
+
 Learning an stand up motion with Upkie wheeled biped robot.
 
 ## Workflow
-
-Hi all!
 
 Below is a description of my workflow.
 
@@ -12,30 +11,29 @@ Right now we are using a locally modified version of the [upkie](https://github.
 ├── envupkie
 ├── others
 ├── upkie
-└── upkie-stand-up
+└── upkie_stand_up
 ```
-1. Go to `upkie` folder and start a simulation using `./tools/bazelisk run -c opt //spines:bullet -- --show`. The `--show` parameter is optional and enables visualization
-2. In a different terminal and once the simulation has started, you can run the training script `python upkie-stand-up/src/agents/xpag/train_sac.py --exp_name exp_name` to train a SAC agent in simulation, for example. The results are saved in `src/agents/xpag/results/exp_name` automatically by `xpag`
-3. To visualize the plot of the evaluations done during training you can use `python upkie-stand-up/tools/plot.py upkie-stand-up/src/agent/xpag/results/exp_name`
-4. To try the agent trained in the experiment you can use `python upkie-stand-up/tools/try_agent.py --exp_path upkie-stand-up/src/agent/xpag/results/exp_name --agent SAC`, making sure there is a simulation running to conect to
+1. Go to __upkie__ folder and start a simulation using `./tools/bazelisk run -c opt //spines:bullet -- --show`. The `--show` parameter is optional and enables visualization
+2. In a different terminal and once the simulation has started, you can run the training script `python tools/train_agent.py --agent SAC --exp_name exp_name` to train a SAC agent in simulation, for example. The results are saved in `results/SAC/exp_name` automatically by __xpag__
+3. To visualize the plot of the evaluations done during training you can use `python tools/plot.py --agent SAC --exp_name exp_name`
+4. To try the agent trained in the experiment you can use `python tools/test_agent.py --agent SAC --exp_name exp_name`, making sure there is a simulation running to conect to
 
-### To train an agent
-
-```
-train_sac.py [-h] [--max_steps MAX_STEPS]
-                    [--evaluate_every_x_steps EVALUATE_EVERY_X_STEPS]
-                    [--save_agent_every_x_steps SAVE_AGENT_EVERY_X_STEPS]
-                    --exp_name EXP_NAME
-```
-
-### To plot experiment results
+### Train an agent
 
 ```
-plot.py [-h] exp_path
+python tools/train_agent.py [-h] --agent {SAC,TQC} [--env ENV] --exp_name EXP_NAME
+                      [--max_steps MAX_STEPS] [--evaluate_every EVALUATE_EVERY]
+                      [--save_every SAVE_EVERY]
 ```
 
-### To try a trained agent
+### Plot experiment results
 
 ```
-try_agent.py [-h] --exp_path EXP_PATH --agent {SAC,TQC} [--steps STEPS]
+python tools/plot.py [-h] --agent {SAC,TQC} --exp_name EXP_NAME
+```
+
+### Test a trained agent
+
+```
+python tools/test_agent.py [-h] --agent {SAC,TQC} [--env ENV] --exp_name EXP_NAME [--steps STEPS]
 ```
