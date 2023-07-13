@@ -8,8 +8,7 @@ from xpag.setters import DefaultSetter
 from xpag.agents import SAC, TQC
 from xpag.tools import learn
 
-import upkie
-from upkie.envs import register
+from upkie_stand_up.src.envs import register
 
 from upkie_stand_up.tools.utils import print_arguments_as_table
 

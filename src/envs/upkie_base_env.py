@@ -110,7 +110,7 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
         self,
         *,
         seed: Optional[int] = None,
-        return_info: bool = False,
+        return_info: bool = True,
         options: Optional[dict] = None,
     ) -> Union[np.ndarray, Tuple[np.ndarray, Dict]]:
         """!
@@ -149,7 +149,7 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
         except RuntimeError:  # not asyncio
             self.__rate = RateLimiter(self.__frequency)
 
-    def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, dict]:
+    def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, dict]:
         """!
         Run one timestep of the environment's dynamics. When the end of the
         episode is reached, you are responsible for calling `reset()` to reset
@@ -159,9 +159,10 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
         @returns
             - ``observation``: Agent's observation of the environment.
             - ``reward``: Amount of reward returned after previous action.
-            - ``done``: Whether the agent reaches the terminal state, which can
+            - ``terminated``: Whether the agent reaches the terminal state, which can
               be a good or a bad thing. If true, the user needs to call
               :func:`reset()`.
+            - ``truncated'': Whether the episode is truncated (reaching max number of steps).
             - ``info``: Contains auxiliary diagnostic information (helpful for
               debugging, logging, and sometimes learning).
         """
@@ -182,9 +183,6 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
         @returns
             - ``observation``: Agent's observation of the environment.
             - ``reward``: Amount of reward returned after previous action.
-            - ``done``: Whether the agent reaches the terminal state, which can
-              be a good or a bad thing. If true, the user needs to call
-              :func:`reset()`.
             - ``terminated``: Whether the agent reaches the terminal state, which can
               be a good or a bad thing. If true, the user needs to call
               :func:`reset()`.
@@ -204,12 +202,13 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
         observation_dict = self._spine.get_observation()
         observation = self.vectorize_observation(observation_dict)
         reward = self.reward.get(observation)
-        done = self.detect_fall(observation_dict)
+        terminated = self.detect_fall(observation_dict)
+        truncated = False
         info = {
             "action": action_dict,
             "observation": observation_dict,
         }
-        return observation, reward, done, truncated, info
+        return observation, reward, terminated, truncated, info
 
     def detect_fall(self, observation_dict: dict) -> bool:
         """!

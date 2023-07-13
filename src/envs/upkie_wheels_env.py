@@ -24,8 +24,8 @@ from gymnasium import spaces
 
 from upkie.observers.base_pitch import compute_base_pitch_from_imu
 
-from .standing_reward import StandingReward
-from .upkie_base_env import UpkieBaseEnv
+from upkie_stand_up.src.envs.standing_reward import StandingReward
+from upkie_stand_up.src.envs.upkie_base_env import UpkieBaseEnv
 
 MAX_BASE_PITCH: float = np.pi
 MAX_GROUND_POSITION: float = float("inf")

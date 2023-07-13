@@ -30,8 +30,8 @@ from upkie.utils.pinocchio import (
     box_velocity_limits,
 )
 
-from .standing_reward import StandingReward
-from .upkie_base_env import UpkieBaseEnv
+from upkie_stand_up.src.envs.standing_reward import StandingReward
+from upkie_stand_up.src.envs.upkie_base_env import UpkieBaseEnv
 
 
 class UpkieServosEnv(UpkieBaseEnv):

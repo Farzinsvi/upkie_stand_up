@@ -1,7 +1,6 @@
 import os
 
-import upkie
-from upkie.envs import register
+from upkie_stand_up.src.envs import register
 
 import xpag
 from xpag.agents import SAC, TQC
