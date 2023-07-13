@@ -6,7 +6,7 @@ Learning an stand up motion with Upkie wheeled biped robot.
 
 Below is a description of my workflow.
 
-Right now we are using a locally modified version of the [upkie](https://github.com/tasts-robots/upkie) repo, which you can find [here](https://github.com/mariogpascual). My set up is:
+The locally modified version of the [upkie](https://github.com/tasts-robots/upkie) repo is no longer necessary. You can use either a local version of the __upkie__ or `pip install upkie`. My set up is:
 ```
 ├── envupkie
 ├── others
