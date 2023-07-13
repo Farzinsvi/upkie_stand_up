@@ -20,7 +20,7 @@ import math
 from typing import Optional
 
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 from upkie.observers.base_pitch import compute_base_pitch_from_imu
 
@@ -67,6 +67,19 @@ class UpkieWheelsEnv(UpkieBaseEnv):
             <td>3</td>
             <td>Body angular velocity of the IMU frame along its y-axis, in
             rad/s.</td>
+        </tr>
+    </table>
+
+    Vectorized actions have the following structure:
+
+    <table>
+        <tr>
+            <td><strong>Index</strong></td>
+            <td><strong>Description</strong></td>
+            </tr>
+        <tr>
+            <td>``0``</td>
+            <td>Ground velocity in [m] / [s].</td>
         </tr>
     </table>
 

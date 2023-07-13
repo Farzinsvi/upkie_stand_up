@@ -19,7 +19,7 @@ import abc
 import asyncio
 from typing import Dict, Optional, Tuple, Union
 
-import gym
+import gymnasium as gym
 import numpy as np
 from loop_rate_limiters import AsyncRateLimiter, RateLimiter
 from vulp.spine import SpineInterface
@@ -36,7 +36,17 @@ DEFAULT_CONFIG = {
             "kp": 20.0,
             "kd": 1.0,
         },
-    }
+    },
+    "floor_contact": {
+        "upper_leg_torque_threshold": 10.0,
+    },
+    "wheel_contact": {
+        "cutoff_period": 0.2,
+        "liftoff_inertia": 0.001,
+        "min_touchdown_acceleration": 2.0,
+        "min_touchdown_torque": 0.015,
+        "touchdown_inertia": 0.004,
+    },
 }
 
 
@@ -56,7 +66,7 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
     real robot, as it relies on the same spine interface that runs on Upkie.
     """
 
-    __frequency: float
+    __frequency: Optional[float]
     __async_rate: Optional[AsyncRateLimiter]
     __rate: Optional[RateLimiter]
     _spine: SpineInterface
@@ -67,7 +77,7 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
         self,
         config: Optional[dict],
         fall_pitch: float,
-        frequency: float,
+        frequency: Optional[float],
         shm_name: str,
     ) -> None:
         """!
@@ -75,7 +85,8 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
 
         @param config Configuration dictionary, also sent to the spine.
         @param fall_pitch Fall pitch angle, in radians.
-        @param frequency Regulated frequency of the control loop, in Hz.
+        @param frequency Regulated frequency of the control loop, in Hz. Set to
+            ``None`` to disable loop frequency regulation.
         @param shm_name Name of shared-memory file.
         """
         if config is None:
@@ -84,6 +95,10 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
         self._spine = SpineInterface(shm_name)
         self.config = config
         self.fall_pitch = fall_pitch
+
+    @property
+    def frequency(self) -> Optional[float]:
+        return self.__frequency
 
     def close(self) -> None:
         """!
@@ -126,6 +141,8 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
     def __reset_rates(self):
         self.__async_rate = None
         self.__rate = None
+        if self.__frequency is None:  # no rate
+            return
         try:
             asyncio.get_running_loop()
             self.__async_rate = AsyncRateLimiter(self.__frequency)
@@ -149,7 +166,8 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
               debugging, logging, and sometimes learning).
         """
         action_dict = self.dictionarize_action(action)
-        self.__rate.sleep()  # wait until clock tick to send the action
+        if self.__rate is not None:
+            self.__rate.sleep()  # wait until clock tick to send the action
         return self.__step(action_dict)
 
     async def async_step(
@@ -167,11 +185,16 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
             - ``done``: Whether the agent reaches the terminal state, which can
               be a good or a bad thing. If true, the user needs to call
               :func:`reset()`.
+            - ``terminated``: Whether the agent reaches the terminal state, which can
+              be a good or a bad thing. If true, the user needs to call
+              :func:`reset()`.
+            - ``truncated'': Whether the episode is truncated (reaching max number of steps).
             - ``info``: Contains auxiliary diagnostic information (helpful for
               debugging, logging, and sometimes learning).
         """
         action_dict = self.dictionarize_action(action)
-        await self.__async_rate.sleep()  # send action at next clock tick
+        if self.__async_rate is not None:
+            await self.__async_rate.sleep()  # send action at next clock tick
         return self.__step(action_dict)
 
     def __step(
@@ -186,7 +209,7 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
             "action": action_dict,
             "observation": observation_dict,
         }
-        return observation, reward, done, info, 0
+        return observation, reward, done, truncated, info
 
     def detect_fall(self, observation_dict: dict) -> bool:
         """!
