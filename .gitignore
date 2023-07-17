@@ -1,2 +1,6 @@
 src/agents/xpag/results/
 results/
+src/envs/__pycache__/
+src/agents/xpag/__pycache__/
+src/agents/sb3/__pycache__/
+tools/__pycache__/
