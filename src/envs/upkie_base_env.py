@@ -49,6 +49,30 @@ DEFAULT_CONFIG = {
     },
 }
 
+LYING_CONFIG = {
+    "bullet": {
+        "control_mode": "torque",
+        "follower_camera": False,
+        "gui": True,
+        "orientation_init_base_in_world": [0.707, 0.0, -0.707, 0.0],
+        "position_init_base_in_world": [0.0, 0.0, 0.1],
+        "torque_control": {
+            "kp": 20.0,
+            "kd": 1.0,
+        },
+    },
+    "floor_contact": {
+        "upper_leg_torque_threshold": 10.0,
+    },
+    "wheel_contact": {
+        "cutoff_period": 0.2,
+        "liftoff_inertia": 0.001,
+        "min_touchdown_acceleration": 2.0,
+        "min_touchdown_torque": 0.015,
+        "touchdown_inertia": 0.004,
+    },
+}
+
 
 class UpkieBaseEnv(abc.ABC, gym.Env):
 
@@ -90,7 +114,7 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
         @param shm_name Name of shared-memory file.
         """
         if config is None:
-            config = DEFAULT_CONFIG
+            config = LYING_CONFIG
         self.__frequency = frequency
         self._spine = SpineInterface(shm_name)
         self.config = config
@@ -203,6 +227,7 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
         observation = self.vectorize_observation(observation_dict)
         reward = self.reward.get(observation)
         terminated = self.detect_fall(observation_dict)
+        # terminated = False
         truncated = False
         info = {
             "action": action_dict,
