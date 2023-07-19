@@ -5,7 +5,7 @@
 
 from typing import Tuple
 
-from pyquaterion import Quaterion
+from pyquaternion import Quaternion
 
 import numpy as np
 
