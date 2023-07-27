@@ -23,6 +23,7 @@ from upkie_stand_up.src.envs.upkie_wheels_env import UpkieWheelsEnv
 from upkie_stand_up.src.envs.upkie_extended_servos_env import UpkieExtendedServosEnv
 from upkie_stand_up.src.envs.upkie_norm_ext_servos_env import UpkieNormExtServosEnv
 from upkie_stand_up.src.envs.upkie_norm_ext_sym_servos_env import UpkieNormExtSymServosEnv
+from upkie_stand_up.src.envs.upkie_stand_up_env import UpkieStandUpEnv
 
 
 def register():
@@ -51,6 +52,11 @@ def register():
         entry_point="upkie_stand_up.src.envs:UpkieNormExtSymServosEnv",
         max_episode_steps=1_000,
     )
+    gym.envs.registration.register(
+        id=f"UpkieStandUpEnv-v{UpkieStandUpEnv.version}",
+        entry_point="upkie_stand_up.src.envs:UpkieStandUpEnv",
+        max_episode_steps=1_000,
+    )
 
 
 __all__ = [
@@ -60,5 +66,6 @@ __all__ = [
     "UpkieExtendedServosEnv",
     "UpkieNormExtServosEnv",
     "UpkieNormExtSymServosEnv",
+    "UpkieStandUpEnv",
     "register",
 ]
