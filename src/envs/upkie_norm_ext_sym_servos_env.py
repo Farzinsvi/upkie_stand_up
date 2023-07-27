@@ -35,6 +35,7 @@ from upkie_stand_up.src.envs.upkie_base_env import UpkieBaseEnv
 from upkie_stand_up.src.envs.upkie_base_env import LYING_CONFIG
 
 from upkie_stand_up.tools.normalize import normalize_vector, unnormalize_vector
+from upkie_stand_up.tools.actions import create_action_dict
 
 imu_max = np.array([1.0, 1.0, 1.0, 1.0])
 imu_dim = 4
@@ -175,7 +176,10 @@ class UpkieNormExtSymServosEnv(UpkieBaseEnv):
         self.__last_positions = {}
         self.q_max = q_max
         self.q_min = q_min
-        self.reward = PseudoHeightReward()
+        self.reward = PseudoHeightReward(
+            imu_weight=10,
+            joints_weight=0
+        )
         self.robot = robot
         self.tau_max = tau_max
         self.v_max = v_max
@@ -222,52 +226,24 @@ class UpkieNormExtSymServosEnv(UpkieBaseEnv):
         """
         nq = self.robot.model.nq
         model = self.robot.model
-        servo_action = {
-            joint: {
-                "position": self.__last_positions[joint],
-                "velocity": 0.0,
-                "torque": 0.0,
-            }
-            for joint in self.__joints
-        }
 
         nq, nv = model.nq, model.nv
 
         action = unnormalize_vector(action, self.action_max, self.action_min)
 
-        new_action = np.zeros(self.action_dim * 2)
+        # TODO: rewrite this
+        action_ = np.zeros(self.action_dim * 2)
         for i in range(3):
             idx = 6*i
-            new_action[idx:idx+3] = action[:3]
-            new_action[idx+3:idx+6] = -action[:3]
+            action_[idx:idx+3] = action[3*i:3*(i+1)]
+            action_[idx+3:idx+6] = -action[3*i:3*(i+1)]
 
-        action = new_action
+        action = action_
 
-        q = action[:nq]
-        v = action[nq : nq + nv]
-        tau = action[nq + nv : nq + 2 * nv]
-        for joint in self.__joints:
-            i = model.getJointId(joint) - 1
-            # q[i] = clamp_and_warn(
-            #     q[i],
-            #     self.q_min[i],
-            #     self.q_max[i],
-            #     label=f"{joint}: position",
-            # )
-            # v[i] = clamp_and_warn(
-            #     v[i],
-            #     -self.v_max[i],
-            #     self.v_max[i],
-            #     label=f"{joint}: velocity",
-            # )
-            # tau[i] = clamp_and_warn(
-            #     tau[i],
-            #     -self.tau_max[i],
-            #     self.tau_max[i],
-            #     label=f"{joint}: torque",
-            # )
-            servo_action[joint]["position"] = q[i]
-            servo_action[joint]["velocity"] = v[i]
-            servo_action[joint]["torque"] = tau[i]
-            self.__last_positions[joint] = q[i]
-        return {"servo": servo_action}
+        action_dict = create_action_dict(
+            position = action[:6],
+            velocity = action[6:12],
+            torque = action[12:]
+        )
+
+        return action_dict
