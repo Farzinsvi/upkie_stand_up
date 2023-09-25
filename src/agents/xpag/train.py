@@ -29,13 +29,13 @@ def train_model(
                 temp_lr=3e-4,
                 tau=5e-2,
                 # Buffer arguments
-                buffer_size=200_000,
+                buffer_size=100_000,
                 # Learning arguments
                 batch_size=256,
                 gradient_steps=1,
                 start_training_after=0,
-                max_steps=1_000_000_000,
-                evaluate_every=5_000,
+                max_steps=1_000_000,
+                evaluate_every=2_500,
                 save_every=50_000,
                 seed=0
                 ):

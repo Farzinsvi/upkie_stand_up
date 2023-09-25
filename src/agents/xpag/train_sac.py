@@ -102,7 +102,7 @@ setter = DefaultSetter()
 
 batch_size = 256
 gd_steps_per_step = 1
-start_training_after_x_steps = 0
+start_training_after_x_steps = 100_000
 max_steps = args.max_steps
 evaluate_every_x_steps = args.evaluate_every_x_steps
 save_agent_every_x_steps = args.save_agent_every_x_steps

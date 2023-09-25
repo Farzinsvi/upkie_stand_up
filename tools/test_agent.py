@@ -14,7 +14,7 @@ def parse_arguments():
     parser.add_argument('--exp_name', type=str, required=True,
                         help='Name of the experiment')
 
-    parser.add_argument('--steps', type=int, default=1_000_000,
+    parser.add_argument('--steps', type=int, default=1_000,
                         help='Number of steps of testing (default: 1_000_000)')
 
     return parser.parse_args()
