@@ -9,9 +9,9 @@ robot = upkie_description.load_in_pinocchio(root_joint=None)
 
 # Random configuration
 # q0 = pin.randomConfiguration(robot.model)
-print(robot.model)
-print(robot.data)
-print(robot.q0)
+# print(robot.model)
+# print(robot.data)
+# print(robot.q0)
 
 # Print out the placement of each joint of the kinematic tree
 
@@ -31,6 +31,7 @@ def pseudo_height(observation):
     # print(heights)
 
     return (0 - np.min(heights))
+    # return (0 - heights[2])
 
 def pseudo_height_2(observation):
     # Get positions
@@ -48,6 +49,7 @@ def pseudo_height_2(observation):
     # print(heights)
 
     return (np.max(heights) - np.min(heights))
+    # return (heights[0] - heights[2])
 
 
 if __name__ == "__main__":
