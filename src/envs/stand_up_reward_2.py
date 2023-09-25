@@ -51,10 +51,10 @@ class StandUpReward:
         @returns Reward.
         """
 
-        pitch = compute_base_pitch_from_imu(observation[18:22])
+        pitch = observation[6]
+        full_joints = np.hstack([observation[:3], -observation[:3]])
         
         return (
             1.0 +
-            self.height_weight * pseudo_height(observation) +
-            (-1.0) * self.pitch_weight * np.abs(pitch / MAX_PITCH)
-            )
+            self.height_weight * pseudo_height_2(full_joints) +
+            (-1.0) * self.pitch_weight * pitch / MAX_PITCH)
