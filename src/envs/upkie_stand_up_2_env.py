@@ -37,15 +37,22 @@ from upkie_stand_up.src.envs.min_pseudo_height_reward import MinPseudoHeightRewa
 from upkie_stand_up.src.envs.leg_height_reward import LegHeightReward
 from upkie_stand_up.src.envs.stand_up_reward import StandUpReward
 from upkie_stand_up.src.envs.upkie_base_env import UpkieBaseEnv
-from upkie_stand_up.src.envs.upkie_base_env import DEFAULT_CONFIG, LYING_CONFIG
+from upkie_stand_up.src.envs.upkie_base_env import LYING_CONFIG
 
 from upkie_stand_up.tools.normalize import normalize_vector, unnormalize_vector
 from upkie_stand_up.tools.actions import create_action_dict
 
+from upkie.observers.base_pitch import compute_base_pitch_from_imu
+
 imu_max = np.array([1.0, 1.0, 1.0, 1.0])
 imu_dim = 4
 
-class UpkieStandUpEnv(UpkieBaseEnv):
+MAX_BASE_PITCH: float = np.pi
+MAX_GROUND_POSITION: float = float("inf")
+MAX_IMU_ANGULAR_VELOCITY: float = 1000.0  # rad/s
+MAX_GROUND_VELOCITY = 1.0
+
+class UpkieStandUpEnv2(UpkieBaseEnv):
 
     """!
     Upkie with full observation extended with IMU and joint position-velocity-torque actions.
@@ -109,7 +116,7 @@ class UpkieStandUpEnv(UpkieBaseEnv):
     using this environment.
     """
 
-    reward: LegHeightReward
+    reward: StandUpReward
     robot: pin.RobotWrapper
     version: int = 0
 
@@ -141,9 +148,18 @@ class UpkieStandUpEnv(UpkieBaseEnv):
         q_min, q_max = box_position_limits(model)
         v_max = box_velocity_limits(model)
         tau_max = box_torque_limits(model)
-        state_dim = model.nq + 2 * model.nv + imu_dim
-        state_max = np.hstack([q_max, v_max, tau_max, imu_max])
-        state_min = np.hstack([q_min, -v_max, -tau_max, -imu_max])
+        observation_limit = np.array(
+            [
+                MAX_BASE_PITCH,
+                MAX_GROUND_POSITION,
+                MAX_GROUND_VELOCITY,
+                MAX_IMU_ANGULAR_VELOCITY,
+            ],
+            dtype=np.float32,
+        )
+        state_dim = 10
+        state_max = np.hstack([q_max[:3], v_max[:3], observation_limit])
+        state_min = np.hstack([q_min[:3], -v_max[:3], -observation_limit])
         state_max = np.float32(state_max)
         state_min = np.float32(state_min)
 
@@ -169,7 +185,6 @@ class UpkieStandUpEnv(UpkieBaseEnv):
         )
 
         # gym.Env: reward_range
-        # self.reward_range = LegHeightReward.get_range()
         self.reward_range = StandUpReward.get_range()
 
         # Class members
@@ -181,7 +196,6 @@ class UpkieStandUpEnv(UpkieBaseEnv):
             height_weight=1.0,
             pitch_weight=1.0
         )
-        # self.reward = LegHeightReward()
         self.robot = robot
         self.tau_max = tau_max
         self.v_max = v_max
@@ -210,13 +224,17 @@ class UpkieStandUpEnv(UpkieBaseEnv):
         """
         nq, nv = self.robot.model.nq, self.robot.model.nv
         model = self.robot.model
-        obs = np.empty(nq + 2 * nv + imu_dim)
+        obs = np.empty(6 + 4)
         for joint in self.__joints:
             i = model.getJointId(joint) - 1
+            if i > 2: 
+                continue
             obs[i] = observation_dict["servo"][joint]["position"]
-            obs[nq + i] = observation_dict["servo"][joint]["velocity"]
-            obs[nq + nv + i] = observation_dict["servo"][joint]["torque"]
-        obs[nq + 2 * nv : nq + 2 * nv + imu_dim] = observation_dict["imu"]["orientation"]
+            obs[3 + i] = observation_dict["servo"][joint]["velocity"]
+        obs[6] = compute_base_pitch_from_imu(observation_dict["imu"]["orientation"])
+        obs[7] = observation_dict["wheel_odometry"]["position"]
+        obs[8] = observation_dict["wheel_odometry"]["velocity"]
+        obs[9] = observation_dict["imu"]["angular_velocity"][1]
         return obs
 
     def dictionarize_action(self, action: np.ndarray) -> dict:

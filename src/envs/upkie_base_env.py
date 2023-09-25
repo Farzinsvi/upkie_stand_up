@@ -73,6 +73,30 @@ LYING_CONFIG = {
     },
 }
 
+CROUCH_CONFIG = {
+    "bullet": {
+        "control_mode": "torque",
+        "follower_camera": False,
+        "gui": True,
+        "orientation_init_base_in_world": [0.92388, 0.0, 0.38268, 0.0],
+        "position_init_base_in_world": [0.0, 0.0, 0.1],
+        "torque_control": {
+            "kp": 20.0,
+            "kd": 1.0,
+        },
+    },
+    "floor_contact": {
+        "upper_leg_torque_threshold": 10.0,
+    },
+    "wheel_contact": {
+        "cutoff_period": 0.2,
+        "liftoff_inertia": 0.001,
+        "min_touchdown_acceleration": 2.0,
+        "min_touchdown_torque": 0.015,
+        "touchdown_inertia": 0.004,
+    },
+}
+
 
 class UpkieBaseEnv(abc.ABC, gym.Env):
 
@@ -103,6 +127,8 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
         fall_pitch: float,
         frequency: Optional[float],
         shm_name: str,
+        fall_height = -np.inf,
+        too_far = np.inf
     ) -> None:
         """!
         Initialize environment.
@@ -119,6 +145,8 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
         self._spine = SpineInterface(shm_name)
         self.config = config
         self.fall_pitch = fall_pitch
+        self.fall_height = fall_height
+        self.too_far = too_far
 
     @property
     def frequency(self) -> Optional[float]:
@@ -226,7 +254,7 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
         observation_dict = self._spine.get_observation()
         observation = self.vectorize_observation(observation_dict)
         reward = self.reward.get(observation)
-        terminated = self.detect_fall(observation_dict)
+        terminated = self.detect_fall(observation_dict, observation)
         # terminated = False
         truncated = False
         info = {
@@ -235,7 +263,7 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
         }
         return observation, reward, terminated, truncated, info
 
-    def detect_fall(self, observation_dict: dict) -> bool:
+    def detect_fall(self, observation_dict: dict, observation) -> bool:
         """!
         Detect a fall based on the body-to-world pitch angle.
 
@@ -243,8 +271,10 @@ class UpkieBaseEnv(abc.ABC, gym.Env):
         @returns True if and only if a fall is detected.
         """
         imu = observation_dict["imu"]
-        pitch = compute_base_pitch_from_imu(imu["orientation"])
-        return abs(pitch) > self.fall_pitch
+        pitch = observation[7]
+        height = observation[6]
+        wheel_position = observation_dict["wheel_odometry"]["position"]
+        return (abs(pitch) > self.fall_pitch) or (height < self.fall_height) or (wheel_position > self.too_far)
 
     @abc.abstractmethod
     def parse_first_observation(self, observation_dict: dict) -> None:
