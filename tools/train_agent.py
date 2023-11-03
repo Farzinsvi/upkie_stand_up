@@ -1,17 +1,33 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# Copyright 2023 ISIR. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 
 from upkie_stand_up.src.agents.xpag.train import train_model
 
-# import os
-# os.environ['CUDA_VISIBLE_DEVICES'] = "0"
-
-# from tensorflow.python.client import device_lib
-# device_lib.list_local_devices()
-
 def parse_arguments():
+    """Parse arguments to train an agent
+
+    Returns:
+        parser: Object containing the parser
+    """
     parser = argparse.ArgumentParser(description='Train Upkie wheel balancer with SAC')
 
-    parser.add_argument('--agent', type=str, choices=['SAC', 'TQC'], required=True,
+    parser.add_argument('--agent', type=str, choices=['SAC', 'TQC', 'TD3'], required=True,
                         help='SAC or TQC')
     
     parser.add_argument('--env', type=str, default='UpkieWheelsEnv-v3',
@@ -23,7 +39,7 @@ def parse_arguments():
     parser.add_argument('--max_steps', type=int, default=4_000_000,
                         help='Maximum number of steps for training (default: 1_000_000_000)')
     
-    parser.add_argument('--evaluate_every', type=int, default=16_000,
+    parser.add_argument('--evaluate_every', type=int, default=5_000,
                         help='Evaluate the agent every x steps (default: 5_000)')
     
     parser.add_argument('--save_every', type=int, default=50_000,
@@ -31,8 +47,6 @@ def parse_arguments():
 
     return parser.parse_args()
 
-
-args = parse_arguments()
 
 if __name__ == "__main__":
     # Parse arguments

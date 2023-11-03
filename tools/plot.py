@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# Copyright 2023 ISIR. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -10,6 +27,12 @@ parser.add_argument('--agent', type=str, choices=['SAC', 'TQC'], help='SAC or TQ
 parser.add_argument('--exp_name', type=str, help='Name of the experiment', required=True)
 
 def plot_experiment(agent_name, exp_name):
+    """Plots the training reward curve of a given experiment
+
+    Args:
+        agent_name (str): Agent name, namely SAC, TD3 or TQC
+        exp_name (str): Experiment name
+    """
     # Experiment path
     path = os.path.join(os.getcwd(), 'results', agent_name, exp_name, 'log.txt')
 

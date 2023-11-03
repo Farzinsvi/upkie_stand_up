@@ -1,20 +1,29 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# Copyright 2023 ISIR. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import pinocchio as pin
 import upkie_description
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 from typing import Tuple
 
-
-# Load robot
 robot = upkie_description.load_in_pinocchio(root_joint=None)
 
-# Random configuration
-# q0 = pin.randomConfiguration(robot.model)
-# print(robot.model)
-# print(robot.data)
-# print(robot.q0)
-
-# Print out the placement of each joint of the kinematic tree
+# Function taken from upkie utils 
 
 def rotation_matrix_from_quaternion(
     quat: Tuple[float, float, float, float]
@@ -57,26 +66,30 @@ def rotation_matrix_from_quaternion(
     )
 
 def compute_height(position, imu_orientation):
-    # perform the forward kinematics over the kinematic tree
+    """Compute de height of Upkie given its joint configuration and IMU orientation.
+
+    This is computed as the height difference between the IMU device and the 
+
+    Args:
+        position (ndarray): 6-dim vector codyfing the position of each joint
+        imu_orientation (ndarray): 4-dim IMU orientation
+
+    Returns:
+        float: float representing the height of Upkie
+    """
+    # Perform the forward kinematics over the kinematic tree
     pin.forwardKinematics(robot.model, robot.data, position)
-    # get IMU id
+    # Get IMU id
     imu_id = robot.model.getFrameId("imu")
-    # get IMU translation
+    # Get IMU translation
     imu_translation = robot.data.oMi[imu_id].translation.T
     # Get IMU rotation
-    # print(imu_orientation)
-    # imu_rotation = R.from_quat(imu_orientation).as_matrix()
     imu_rotation = rotation_matrix_from_quaternion(imu_orientation)
 
     heights = [(imu_rotation @ (oMi.translation.T - imu_translation))[2]
         for oMi in robot.data.oMi][1:]
 
-    # for name, oMi in zip(robot.model.names, robot.data.oMi):
-    #     print(("{:<24} : {: .2f} {: .2f} {: .2f}"
-    #         .format( name, *oMi.translation.T.flat )))
-
-
-    return (0 - heights[2])
+    return (0 - (heights[2] + heights[5])/2)
 
 
 if __name__ == "__main__":
