@@ -58,65 +58,19 @@ MAX_IMU_ANGULAR_VELOCITY: float = 1000.0  # rad/s
 class UpkieWheelsNewEnv(UpkieBaseEnv):
 
     """!
-    Upkie with full observation extended with IMU and joint position-velocity-torque actions.
+    Environment to learn a balancing motion with Upkie.
 
-    TODO: normalize actions.
+    11-dimensional state space:
+    - 3 position
+    - 3 velocity
+    - height
+    - pitch
+    - ground position
+    - ground velocity
+    - angular velocity
 
-    The environment has the following attributes:
-
-    - ``reward``: Reward function.
-    - ``robot``: Pinocchio robot wrapper.
-    - ``state_max``: Maximum values for the action and observation vectors.
-    - ``state_min``: Minimum values for the action and observation vectors.
-    - ``version``: Environment version number.
-
-    Vectorized observations have the following structure:
-
-    <table>
-        <tr>
-            <td><strong>Index</strong></td>
-            <td><strong>Description</strong></td>
-            </tr>
-        <tr>
-            <td>``[0:nq]``</td>
-            <td>Joint positions in [rad].</td>
-        </tr>
-        <tr>
-            <td>``[nq:nq + nv]``</td>
-            <td>Joint velocities in [rad] / [s].</td>
-        </tr>
-        <tr>
-            <td>``[nq + nv:nq + 2 * nv]``</td>
-            <td>Joint torques in [N] * [m].</td>
-        </tr>
-    </table>
-
-    Vectorized actions have the following structure:
-
-    <table>
-        <tr>
-            <td><strong>Index</strong></td>
-            <td><strong>Description</strong></td>
-            </tr>
-        <tr>
-            <td>``[0:nq]``</td>
-            <td>Joint position commands in [rad].</td>
-        </tr>
-        <tr>
-            <td>``[nq:nq + nv]``</td>
-            <td>Joint velocity commands in [rad] / [s].</td>
-        </tr>
-        <tr>
-            <td>``[nq + nv:nq + 2 * nv]``</td>
-            <td>Joint torques in [N] * [m].</td>
-        </tr>
-    </table>
-
-    The reward function is defined in @ref
-    envs.pseudo_height_reward.PseudoHeightReward "PseudoHeightReward".
-
-    See also @ref envs.upkie_base_env.UpkieBaseEnv "UpkieBaseEnv" for notes on
-    using this environment.
+    3-dimensional action space:
+    - 3 velocity
     """
 
     reward: BalancingReward
@@ -276,65 +230,20 @@ class UpkieWheelsNewEnv(UpkieBaseEnv):
 class UpkieWheelsNewEnv2(UpkieBaseEnv):
 
     """!
-    Upkie with full observation extended with IMU and joint position-velocity-torque actions.
+    Environment to learn a balancing motion with Upkie.
 
-    TODO: normalize actions.
+    11-dimensional state space:
+    - 3 position
+    - 3 velocity
+    - height
+    - pitch
+    - ground position
+    - ground velocity
+    - angular velocity
 
-    The environment has the following attributes:
-
-    - ``reward``: Reward function.
-    - ``robot``: Pinocchio robot wrapper.
-    - ``state_max``: Maximum values for the action and observation vectors.
-    - ``state_min``: Minimum values for the action and observation vectors.
-    - ``version``: Environment version number.
-
-    Vectorized observations have the following structure:
-
-    <table>
-        <tr>
-            <td><strong>Index</strong></td>
-            <td><strong>Description</strong></td>
-            </tr>
-        <tr>
-            <td>``[0:nq]``</td>
-            <td>Joint positions in [rad].</td>
-        </tr>
-        <tr>
-            <td>``[nq:nq + nv]``</td>
-            <td>Joint velocities in [rad] / [s].</td>
-        </tr>
-        <tr>
-            <td>``[nq + nv:nq + 2 * nv]``</td>
-            <td>Joint torques in [N] * [m].</td>
-        </tr>
-    </table>
-
-    Vectorized actions have the following structure:
-
-    <table>
-        <tr>
-            <td><strong>Index</strong></td>
-            <td><strong>Description</strong></td>
-            </tr>
-        <tr>
-            <td>``[0:nq]``</td>
-            <td>Joint position commands in [rad].</td>
-        </tr>
-        <tr>
-            <td>``[nq:nq + nv]``</td>
-            <td>Joint velocity commands in [rad] / [s].</td>
-        </tr>
-        <tr>
-            <td>``[nq + nv:nq + 2 * nv]``</td>
-            <td>Joint torques in [N] * [m].</td>
-        </tr>
-    </table>
-
-    The reward function is defined in @ref
-    envs.pseudo_height_reward.PseudoHeightReward "PseudoHeightReward".
-
-    See also @ref envs.upkie_base_env.UpkieBaseEnv "UpkieBaseEnv" for notes on
-    using this environment.
+    6-dimensional action space:
+    - 3 position
+    - 3 velocity
     """
 
     reward: BalancingReward
@@ -494,65 +403,21 @@ class UpkieWheelsNewEnv2(UpkieBaseEnv):
 class UpkieWheelsNewEnv3(UpkieBaseEnv):
 
     """!
-    Upkie with full observation extended with IMU and joint position-velocity-torque actions.
+    Environment to learn a balancing motion with Upkie.
 
-    TODO: normalize actions.
+    11-dimensional state space:
+    - 3 position
+    - 3 velocity
+    - height
+    - pitch
+    - ground position
+    - ground velocity
+    - angular velocity
 
-    The environment has the following attributes:
-
-    - ``reward``: Reward function.
-    - ``robot``: Pinocchio robot wrapper.
-    - ``state_max``: Maximum values for the action and observation vectors.
-    - ``state_min``: Minimum values for the action and observation vectors.
-    - ``version``: Environment version number.
-
-    Vectorized observations have the following structure:
-
-    <table>
-        <tr>
-            <td><strong>Index</strong></td>
-            <td><strong>Description</strong></td>
-            </tr>
-        <tr>
-            <td>``[0:nq]``</td>
-            <td>Joint positions in [rad].</td>
-        </tr>
-        <tr>
-            <td>``[nq:nq + nv]``</td>
-            <td>Joint velocities in [rad] / [s].</td>
-        </tr>
-        <tr>
-            <td>``[nq + nv:nq + 2 * nv]``</td>
-            <td>Joint torques in [N] * [m].</td>
-        </tr>
-    </table>
-
-    Vectorized actions have the following structure:
-
-    <table>
-        <tr>
-            <td><strong>Index</strong></td>
-            <td><strong>Description</strong></td>
-            </tr>
-        <tr>
-            <td>``[0:nq]``</td>
-            <td>Joint position commands in [rad].</td>
-        </tr>
-        <tr>
-            <td>``[nq:nq + nv]``</td>
-            <td>Joint velocity commands in [rad] / [s].</td>
-        </tr>
-        <tr>
-            <td>``[nq + nv:nq + 2 * nv]``</td>
-            <td>Joint torques in [N] * [m].</td>
-        </tr>
-    </table>
-
-    The reward function is defined in @ref
-    envs.pseudo_height_reward.PseudoHeightReward "PseudoHeightReward".
-
-    See also @ref envs.upkie_base_env.UpkieBaseEnv "UpkieBaseEnv" for notes on
-    using this environment.
+    9-dimensional action space:
+    - 3 position
+    - 3 velocity
+    - 3 torque
     """
 
     reward: BalancingReward

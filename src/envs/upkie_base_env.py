@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# Copyright 2023 Inria
+
+# Copyright 2023 ISIR. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -47,6 +47,12 @@ DEFAULT_CONFIG = {
         "min_touchdown_torque": 0.015,
         "touchdown_inertia": 0.004,
     },
+    "wheel_odometry": {
+        "signed_radius": {
+            "left_wheel": +0.05,
+            "right_wheel": -0.05
+        }
+    }
 }
 
 LYING_CONFIG = {
@@ -71,6 +77,12 @@ LYING_CONFIG = {
         "min_touchdown_torque": 0.015,
         "touchdown_inertia": 0.004,
     },
+    "wheel_odometry": {
+        "signed_radius": {
+            "left_wheel": +0.05,
+            "right_wheel": -0.05
+        }
+    }
 }
 
 CROUCH_CONFIG = {
@@ -95,23 +107,19 @@ CROUCH_CONFIG = {
         "min_touchdown_torque": 0.015,
         "touchdown_inertia": 0.004,
     },
+    "wheel_odometry": {
+        "signed_radius": {
+            "left_wheel": +0.05,
+            "right_wheel": -0.05
+        }
+    }
 }
 
 
 class UpkieBaseEnv(abc.ABC, gym.Env):
 
     """!
-    Base class for Upkie environments.
-
-    This class has the following attributes:
-
-    - ``config``: Configuration dictionary, also sent to the spine.
-    - ``fall_pitch``: Fall pitch angle, in radians.
-
-    @note This environment is made to run on a single CPU thread rather than on
-    GPU/TPU. The downside for reinforcement learning is that computations are
-    not massively parallel. The upside is that it simplifies deployment to the
-    real robot, as it relies on the same spine interface that runs on Upkie.
+    Modified base class.
     """
 
     __frequency: Optional[float]

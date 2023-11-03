@@ -1,24 +1,38 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+# Copyright 2023 ISIR. All rights reserved.
 #
-# Copyright 2023 Inria
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+    Important: these rewards can only be used with the environments UpkieAlphaEnv,
+    UpkieBetaEnv and UpkieGammaEnv. Except GroundPositionReward and BalancingReward,
+    that are to be used for UpkieWheelsNewEnv
+"""
 
 from typing import Tuple
-
-# from upkie_stand_up.tools.new_observators import compute_height
 
 import numpy as np
 
 # max height: is less than one, max pitch: pi/2
 MAX_HEIGHT = 0.34299999999999997
-# MAX_HEIGHT = 1.0
 MAX_PITCH = 1.5707963267948966
 MAX_GROUND_POSITION = 1.0
 
 class TimeReward:
-
     """!
-    TODO: explain
+    Gives 1.0 or reward each steps.
 
     This class has no attributes.
     """
@@ -51,9 +65,8 @@ class TimeReward:
         return 1.0
 
 class HeightReward:
-
     """!
-    TODO: explain
+    Returns the normalized height of the robot.
 
     This class has no attributes.
     """
@@ -91,7 +104,7 @@ class HeightReward:
 class PitchReward:
 
     """!
-    TODO: explain
+    Returns the normalized pitch of the robot.
 
     This class has no attributes.
     """
@@ -127,9 +140,8 @@ class PitchReward:
 
 
 class SumReward:
-
     """!
-    TODO: explain
+    Returns the normalized sum of the height and pitch rewards.
 
     This class has no attributes.
     """
@@ -168,7 +180,7 @@ class SumReward:
 class ProdReward:
 
     """!
-    TODO: explain
+    Returns the product of the height and pitch rewards.
 
     This class has no attributes.
     """
@@ -207,7 +219,7 @@ class ProdReward:
 class MinReward:
 
     """!
-    TODO: explain
+    Returns the minimum between the height and pitch rewards.
 
     This class has no attributes.
     """
@@ -245,7 +257,8 @@ class MinReward:
 class BoundedSumReward:
 
     """!
-    TODO: explain
+    Returns the sum of bounded variants of the height and pitch rewards, where
+    the reward is 0 unless height or pitch are above a certain threshold.
 
     This class has no attributes.
     """
@@ -290,7 +303,8 @@ class BoundedSumReward:
 class BoundedProdReward:
 
     """!
-    TODO: explain
+    Returns the product of bounded variants of the height and pitch rewards, where
+    the reward is 0 unless height or pitch are above a certain threshold.
 
     This class has no attributes.
     """
@@ -335,7 +349,8 @@ class BoundedProdReward:
 class MinHeightProdReward:
 
     """!
-    TODO: explain
+    Returns the product of the height and pitch rewards, or 0 if the height is not
+    above a certain threshold.
 
     This class has no attributes.
     """
@@ -379,7 +394,8 @@ class MinHeightProdReward:
 class MinHeightSumReward:
 
     """!
-    TODO: explain
+    Returns the sum of the height and pitch rewards, or 0 if the height is not
+    above a certain threshold.
 
     This class has no attributes.
     """
@@ -424,7 +440,7 @@ class MinHeightSumReward:
 class GroundPositionReward:
 
     """!
-    TODO: explain
+    Returns the normalized ground position of the robot given by wheel odometry.
 
     This class has no attributes.
     """
@@ -462,7 +478,7 @@ class GroundPositionReward:
 class BalancingReward:
 
     """!
-    TODO: explain
+    Returns the product between the height and ground position rewards.
 
     This class has no attributes.
     """
