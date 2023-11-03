@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# Copyright 2023 Inria
+
+# Copyright 2023 ISIR. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ import numpy as np
 import pinocchio as pin
 import upkie_description
 
+import math
+
 from gymnasium import spaces
 
 from upkie.utils.clamp import clamp_and_warn
@@ -31,19 +33,26 @@ from upkie.utils.pinocchio import (
 )
 
 from upkie_stand_up.src.envs.pseudo_height_reward import PseudoHeightReward
+from upkie_stand_up.src.envs.min_pseudo_height_reward import MinPseudoHeightReward
+from upkie_stand_up.src.envs.leg_height_reward import LegHeightReward
+from upkie_stand_up.src.envs.stand_up_reward import StandUpReward
 from upkie_stand_up.src.envs.upkie_base_env import UpkieBaseEnv
 from upkie_stand_up.src.envs.upkie_base_env import LYING_CONFIG
 
 from upkie_stand_up.tools.normalize import normalize_vector, unnormalize_vector
 from upkie_stand_up.tools.actions import create_action_dict
 
+from upkie.observers.base_pitch import compute_base_pitch_from_imu
+
 imu_max = np.array([1.0, 1.0, 1.0, 1.0])
 imu_dim = 4
 
-max_wheels_pos = 10
-wheels_pos_idx = [2]
+MAX_BASE_PITCH: float = np.pi
+MAX_GROUND_POSITION: float = float("inf")
+MAX_IMU_ANGULAR_VELOCITY: float = 1000.0  # rad/s
+MAX_GROUND_VELOCITY = 1.0
 
-class UpkieNormExtSymServosEnv(UpkieBaseEnv):
+class UpkieStandUpEnv2(UpkieBaseEnv):
 
     """!
     Upkie with full observation extended with IMU and joint position-velocity-torque actions.
@@ -107,7 +116,7 @@ class UpkieNormExtSymServosEnv(UpkieBaseEnv):
     using this environment.
     """
 
-    reward: PseudoHeightReward
+    reward: StandUpReward
     robot: pin.RobotWrapper
     version: int = 0
 
@@ -129,7 +138,7 @@ class UpkieNormExtSymServosEnv(UpkieBaseEnv):
         super().__init__(
             config=config,
             fall_pitch=fall_pitch,
-            frequency=frequency,
+            frequency=None,
             shm_name=shm_name,
         )
 
@@ -139,18 +148,25 @@ class UpkieNormExtSymServosEnv(UpkieBaseEnv):
         q_min, q_max = box_position_limits(model)
         v_max = box_velocity_limits(model)
         tau_max = box_torque_limits(model)
-        state_dim = model.nq + 2 * model.nv + imu_dim
-        state_max = np.hstack([q_max, v_max, tau_max, imu_max])
-        state_min = np.hstack([q_min, -v_max, -tau_max, -imu_max])
+        observation_limit = np.array(
+            [
+                MAX_BASE_PITCH,
+                MAX_GROUND_POSITION,
+                MAX_GROUND_VELOCITY,
+                MAX_IMU_ANGULAR_VELOCITY,
+            ],
+            dtype=np.float32,
+        )
+        state_dim = 10
+        state_max = np.hstack([q_max[:3], v_max[:3], observation_limit])
+        state_min = np.hstack([q_min[:3], -v_max[:3], -observation_limit])
         state_max = np.float32(state_max)
         state_min = np.float32(state_min)
 
-        action_dim = 9
-        action_max = np.hstack([q_max[:3], v_max[:3], tau_max[:3]])
-        action_min = np.hstack([q_min[:3], -v_max[:3], -tau_max[:3]])
+        action_dim = 3
+        action_max = v_max[:3]
+        action_min = -v_max[:3]
     
-        action_max[wheels_pos_idx] = max_wheels_pos
-        action_min[wheels_pos_idx] = -max_wheels_pos
 
         # gym.Env: action_space
         self.action_space = spaces.Box(
@@ -169,16 +185,16 @@ class UpkieNormExtSymServosEnv(UpkieBaseEnv):
         )
 
         # gym.Env: reward_range
-        self.reward_range = PseudoHeightReward.get_range()
+        self.reward_range = StandUpReward.get_range()
 
         # Class members
         self.__joints = list(robot.model.names)[1:]
         self.__last_positions = {}
         self.q_max = q_max
         self.q_min = q_min
-        self.reward = PseudoHeightReward(
-            imu_weight=10,
-            joints_weight=0
+        self.reward = StandUpReward(
+            height_weight=1.0,
+            pitch_weight=1.0
         )
         self.robot = robot
         self.tau_max = tau_max
@@ -208,13 +224,17 @@ class UpkieNormExtSymServosEnv(UpkieBaseEnv):
         """
         nq, nv = self.robot.model.nq, self.robot.model.nv
         model = self.robot.model
-        obs = np.empty(nq + 2 * nv + imu_dim)
+        obs = np.empty(6 + 4)
         for joint in self.__joints:
             i = model.getJointId(joint) - 1
+            if i > 2: 
+                continue
             obs[i] = observation_dict["servo"][joint]["position"]
-            obs[nq + i] = observation_dict["servo"][joint]["velocity"]
-            obs[nq + nv + i] = observation_dict["servo"][joint]["torque"]
-        obs[nq + 2 * nv : nq + 2 * nv + imu_dim] = observation_dict["imu"]["orientation"]
+            obs[3 + i] = observation_dict["servo"][joint]["velocity"]
+        obs[6] = compute_base_pitch_from_imu(observation_dict["imu"]["orientation"])
+        obs[7] = observation_dict["wheel_odometry"]["position"]
+        obs[8] = observation_dict["wheel_odometry"]["velocity"]
+        obs[9] = observation_dict["imu"]["angular_velocity"][1]
         return obs
 
     def dictionarize_action(self, action: np.ndarray) -> dict:
@@ -231,19 +251,12 @@ class UpkieNormExtSymServosEnv(UpkieBaseEnv):
 
         action = unnormalize_vector(action, self.action_max, self.action_min)
 
-        # TODO: rewrite this
-        action_ = np.zeros(self.action_dim * 2)
-        for i in range(3):
-            idx = 6*i
-            action_[idx:idx+3] = action[3*i:3*(i+1)]
-            action_[idx+3:idx+6] = -action[3*i:3*(i+1)]
-
-        action = action_
+        action = np.hstack([action, -action])
 
         action_dict = create_action_dict(
-            position = action[:6],
-            velocity = action[6:12],
-            torque = action[12:]
+            position = [math.nan for _ in range(6)],
+            velocity = action,
+            torque = self.tau_max
         )
 
         return action_dict

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# Copyright 2023 Inria
+
+# Copyright 2023 ISIR. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,6 @@ import numpy as np
 import pinocchio as pin
 import upkie_description
 
-import math
-
 from gymnasium import spaces
 
 from upkie.utils.clamp import clamp_and_warn
@@ -32,27 +30,14 @@ from upkie.utils.pinocchio import (
     box_velocity_limits,
 )
 
-from upkie_stand_up.src.envs.pseudo_height_reward import PseudoHeightReward
-from upkie_stand_up.src.envs.min_pseudo_height_reward import MinPseudoHeightReward
-from upkie_stand_up.src.envs.leg_height_reward import LegHeightReward
-from upkie_stand_up.src.envs.stand_up_reward import StandUpReward
+from upkie_stand_up.src.envs.standing_reward import StandingReward
 from upkie_stand_up.src.envs.upkie_base_env import UpkieBaseEnv
-from upkie_stand_up.src.envs.upkie_base_env import LYING_CONFIG
-
-from upkie_stand_up.tools.normalize import normalize_vector, unnormalize_vector
-from upkie_stand_up.tools.actions import create_action_dict
-
-from upkie.observers.base_pitch import compute_base_pitch_from_imu
 
 imu_max = np.array([1.0, 1.0, 1.0, 1.0])
 imu_dim = 4
 
-MAX_BASE_PITCH: float = np.pi
-MAX_GROUND_POSITION: float = float("inf")
-MAX_IMU_ANGULAR_VELOCITY: float = 1000.0  # rad/s
-MAX_GROUND_VELOCITY = 1.0
 
-class UpkieStandUpEnv2(UpkieBaseEnv):
+class UpkieExtendedServosEnv(UpkieBaseEnv):
 
     """!
     Upkie with full observation extended with IMU and joint position-velocity-torque actions.
@@ -110,21 +95,21 @@ class UpkieStandUpEnv2(UpkieBaseEnv):
     </table>
 
     The reward function is defined in @ref
-    envs.pseudo_height_reward.PseudoHeightReward "PseudoHeightReward".
+    envs.standing_reward.StandingReward "StandingReward".
 
     See also @ref envs.upkie_base_env.UpkieBaseEnv "UpkieBaseEnv" for notes on
     using this environment.
     """
 
-    reward: StandUpReward
+    reward: StandingReward
     robot: pin.RobotWrapper
     version: int = 0
 
     def __init__(
         self,
-        config: Optional[dict] = LYING_CONFIG,
-        fall_pitch: float = np.inf,
-        frequency: float = None,
+        config: Optional[dict] = None,
+        fall_pitch: float = 1.0,
+        frequency: float = 200.0,
         shm_name: str = "/vulp",
     ):
         """!
@@ -138,7 +123,7 @@ class UpkieStandUpEnv2(UpkieBaseEnv):
         super().__init__(
             config=config,
             fall_pitch=fall_pitch,
-            frequency=None,
+            frequency=frequency,
             shm_name=shm_name,
         )
 
@@ -148,30 +133,21 @@ class UpkieStandUpEnv2(UpkieBaseEnv):
         q_min, q_max = box_position_limits(model)
         v_max = box_velocity_limits(model)
         tau_max = box_torque_limits(model)
-        observation_limit = np.array(
-            [
-                MAX_BASE_PITCH,
-                MAX_GROUND_POSITION,
-                MAX_GROUND_VELOCITY,
-                MAX_IMU_ANGULAR_VELOCITY,
-            ],
-            dtype=np.float32,
-        )
-        state_dim = 10
-        state_max = np.hstack([q_max[:3], v_max[:3], observation_limit])
-        state_min = np.hstack([q_min[:3], -v_max[:3], -observation_limit])
+        state_dim = model.nq + 2 * model.nv + imu_dim
+        state_max = np.hstack([q_max, v_max, tau_max, imu_max])
+        state_min = np.hstack([q_min, -v_max, -tau_max, -imu_max])
         state_max = np.float32(state_max)
         state_min = np.float32(state_min)
 
-        action_dim = 3
-        action_max = v_max[:3]
-        action_min = -v_max[:3]
-    
-
+        action_dim = model.nq + 2 * model.nv
+        action_max = np.hstack([q_max, v_max, tau_max])
+        action_min = np.hstack([q_min, -v_max, -tau_max])
+        action_max = np.float32(action_max)
+        action_min = np.float32(action_min)
         # gym.Env: action_space
         self.action_space = spaces.Box(
-            np.float32(-np.ones(action_dim)),
-            np.float32(np.ones(action_dim)),
+            action_min,
+            action_max,
             shape=(action_dim,),
             dtype=np.float32,
         )
@@ -185,24 +161,17 @@ class UpkieStandUpEnv2(UpkieBaseEnv):
         )
 
         # gym.Env: reward_range
-        self.reward_range = StandUpReward.get_range()
+        self.reward_range = StandingReward.get_range()
 
         # Class members
         self.__joints = list(robot.model.names)[1:]
         self.__last_positions = {}
         self.q_max = q_max
         self.q_min = q_min
-        self.reward = StandUpReward(
-            height_weight=1.0,
-            pitch_weight=1.0
-        )
+        self.reward = StandingReward()
         self.robot = robot
         self.tau_max = tau_max
         self.v_max = v_max
-
-        self.action_dim = action_dim
-        self.action_max = action_max
-        self.action_min = action_min
 
     def parse_first_observation(self, observation_dict: dict) -> None:
         """!
@@ -224,17 +193,13 @@ class UpkieStandUpEnv2(UpkieBaseEnv):
         """
         nq, nv = self.robot.model.nq, self.robot.model.nv
         model = self.robot.model
-        obs = np.empty(6 + 4)
+        obs = np.empty(nq + 2 * nv + imu_dim)
         for joint in self.__joints:
             i = model.getJointId(joint) - 1
-            if i > 2: 
-                continue
             obs[i] = observation_dict["servo"][joint]["position"]
-            obs[3 + i] = observation_dict["servo"][joint]["velocity"]
-        obs[6] = compute_base_pitch_from_imu(observation_dict["imu"]["orientation"])
-        obs[7] = observation_dict["wheel_odometry"]["position"]
-        obs[8] = observation_dict["wheel_odometry"]["velocity"]
-        obs[9] = observation_dict["imu"]["angular_velocity"][1]
+            obs[nq + i] = observation_dict["servo"][joint]["velocity"]
+            obs[nq + nv + i] = observation_dict["servo"][joint]["torque"]
+        obs[nq + 2 * nv : nq + 2 * nv + imu_dim] = observation_dict["imu"]["orientation"]
         return obs
 
     def dictionarize_action(self, action: np.ndarray) -> dict:
@@ -246,17 +211,41 @@ class UpkieStandUpEnv2(UpkieBaseEnv):
         """
         nq = self.robot.model.nq
         model = self.robot.model
+        servo_action = {
+            joint: {
+                "position": self.__last_positions[joint],
+                "velocity": 0.0,
+                "torque": 0.0,
+            }
+            for joint in self.__joints
+        }
 
         nq, nv = model.nq, model.nv
-
-        action = unnormalize_vector(action, self.action_max, self.action_min)
-
-        action = np.hstack([action, -action])
-
-        action_dict = create_action_dict(
-            position = [math.nan for _ in range(6)],
-            velocity = action,
-            torque = self.tau_max
-        )
-
-        return action_dict
+        q = action[:nq]
+        v = action[nq : nq + nv]
+        tau = action[nq + nv : nq + 2 * nv]
+        for joint in self.__joints:
+            i = model.getJointId(joint) - 1
+            q[i] = clamp_and_warn(
+                q[i],
+                self.q_min[i],
+                self.q_max[i],
+                label=f"{joint}: position",
+            )
+            v[i] = clamp_and_warn(
+                v[i],
+                -self.v_max[i],
+                self.v_max[i],
+                label=f"{joint}: velocity",
+            )
+            tau[i] = clamp_and_warn(
+                tau[i],
+                -self.tau_max[i],
+                self.tau_max[i],
+                label=f"{joint}: torque",
+            )
+            servo_action[joint]["position"] = q[i]
+            servo_action[joint]["velocity"] = v[i]
+            servo_action[joint]["torque"] = tau[i]
+            self.__last_positions[joint] = q[i]
+        return {"servo": servo_action}

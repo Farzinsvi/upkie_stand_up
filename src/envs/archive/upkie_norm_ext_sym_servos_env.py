@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#
-# Copyright 2023 Inria
+
+# Copyright 2023 ISIR. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,18 +30,20 @@ from upkie.utils.pinocchio import (
     box_velocity_limits,
 )
 
-from upkie_stand_up.src.envs.standing_reward import StandingReward
+from upkie_stand_up.src.envs.pseudo_height_reward import PseudoHeightReward
 from upkie_stand_up.src.envs.upkie_base_env import UpkieBaseEnv
+from upkie_stand_up.src.envs.upkie_base_env import LYING_CONFIG
 
 from upkie_stand_up.tools.normalize import normalize_vector, unnormalize_vector
+from upkie_stand_up.tools.actions import create_action_dict
 
 imu_max = np.array([1.0, 1.0, 1.0, 1.0])
 imu_dim = 4
 
 max_wheels_pos = 10
-wheels_pos_idx = [2, 5]
+wheels_pos_idx = [2]
 
-class UpkieNormExtServosEnv(UpkieBaseEnv):
+class UpkieNormExtSymServosEnv(UpkieBaseEnv):
 
     """!
     Upkie with full observation extended with IMU and joint position-velocity-torque actions.
@@ -99,21 +101,21 @@ class UpkieNormExtServosEnv(UpkieBaseEnv):
     </table>
 
     The reward function is defined in @ref
-    envs.standing_reward.StandingReward "StandingReward".
+    envs.pseudo_height_reward.PseudoHeightReward "PseudoHeightReward".
 
     See also @ref envs.upkie_base_env.UpkieBaseEnv "UpkieBaseEnv" for notes on
     using this environment.
     """
 
-    reward: StandingReward
+    reward: PseudoHeightReward
     robot: pin.RobotWrapper
     version: int = 0
 
     def __init__(
         self,
-        config: Optional[dict] = None,
-        fall_pitch: float = 1.0,
-        frequency: float = 200.0,
+        config: Optional[dict] = LYING_CONFIG,
+        fall_pitch: float = np.inf,
+        frequency: float = None,
         shm_name: str = "/vulp",
     ):
         """!
@@ -143,9 +145,9 @@ class UpkieNormExtServosEnv(UpkieBaseEnv):
         state_max = np.float32(state_max)
         state_min = np.float32(state_min)
 
-        action_dim = model.nq + 2 * model.nv
-        action_max = np.hstack([q_max, v_max, tau_max])
-        action_min = np.hstack([q_min, -v_max, -tau_max])
+        action_dim = 9
+        action_max = np.hstack([q_max[:3], v_max[:3], tau_max[:3]])
+        action_min = np.hstack([q_min[:3], -v_max[:3], -tau_max[:3]])
     
         action_max[wheels_pos_idx] = max_wheels_pos
         action_min[wheels_pos_idx] = -max_wheels_pos
@@ -167,14 +169,17 @@ class UpkieNormExtServosEnv(UpkieBaseEnv):
         )
 
         # gym.Env: reward_range
-        self.reward_range = StandingReward.get_range()
+        self.reward_range = PseudoHeightReward.get_range()
 
         # Class members
         self.__joints = list(robot.model.names)[1:]
         self.__last_positions = {}
         self.q_max = q_max
         self.q_min = q_min
-        self.reward = StandingReward()
+        self.reward = PseudoHeightReward(
+            imu_weight=10,
+            joints_weight=0
+        )
         self.robot = robot
         self.tau_max = tau_max
         self.v_max = v_max
@@ -221,44 +226,24 @@ class UpkieNormExtServosEnv(UpkieBaseEnv):
         """
         nq = self.robot.model.nq
         model = self.robot.model
-        servo_action = {
-            joint: {
-                "position": self.__last_positions[joint],
-                "velocity": 0.0,
-                "torque": 0.0,
-            }
-            for joint in self.__joints
-        }
 
         nq, nv = model.nq, model.nv
 
         action = unnormalize_vector(action, self.action_max, self.action_min)
 
-        q = action[:nq]
-        v = action[nq : nq + nv]
-        tau = action[nq + nv : nq + 2 * nv]
-        for joint in self.__joints:
-            i = model.getJointId(joint) - 1
-            q[i] = clamp_and_warn(
-                q[i],
-                self.q_min[i],
-                self.q_max[i],
-                label=f"{joint}: position",
-            )
-            v[i] = clamp_and_warn(
-                v[i],
-                -self.v_max[i],
-                self.v_max[i],
-                label=f"{joint}: velocity",
-            )
-            tau[i] = clamp_and_warn(
-                tau[i],
-                -self.tau_max[i],
-                self.tau_max[i],
-                label=f"{joint}: torque",
-            )
-            servo_action[joint]["position"] = q[i]
-            servo_action[joint]["velocity"] = v[i]
-            servo_action[joint]["torque"] = tau[i]
-            self.__last_positions[joint] = q[i]
-        return {"servo": servo_action}
+        # TODO: rewrite this
+        action_ = np.zeros(self.action_dim * 2)
+        for i in range(3):
+            idx = 6*i
+            action_[idx:idx+3] = action[3*i:3*(i+1)]
+            action_[idx+3:idx+6] = -action[3*i:3*(i+1)]
+
+        action = action_
+
+        action_dict = create_action_dict(
+            position = action[:6],
+            velocity = action[6:12],
+            torque = action[12:]
+        )
+
+        return action_dict
